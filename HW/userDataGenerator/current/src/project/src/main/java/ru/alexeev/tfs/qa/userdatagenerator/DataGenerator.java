@@ -8,6 +8,9 @@ import okhttp3.Request;
 import okhttp3.Response;
 import ru.alexeev.tfs.qa.userdatagenerator.attribute.*;
 import ru.alexeev.tfs.qa.userdatagenerator.attribute.generate.*;
+import ru.alexeev.tfs.qa.userdatagenerator.database.DatabaseAddress;
+import ru.alexeev.tfs.qa.userdatagenerator.database.DatabaseHandler;
+import ru.alexeev.tfs.qa.userdatagenerator.database.DatabaseUser;
 import ru.alexeev.tfs.qa.userdatagenerator.io.Writer;
 import ru.alexeev.tfs.qa.userdatagenerator.io.WriterExcel;
 import ru.alexeev.tfs.qa.userdatagenerator.io.WriterPdfTable;
@@ -17,6 +20,8 @@ import ru.alexeev.tfs.qa.userdatagenerator.pojo.PojoUser;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 
@@ -24,6 +29,8 @@ import java.util.*;
 public class DataGenerator {
 
     private static final String dataGeneratingSiteUrl = "https://randomuser.me/api/";
+
+    private DatabaseHandler databaseHandler;
 
     private Attribute[][] data;
     private Map<String, AttributeGeneratorsComposition> attributeGeneratorsCompositions = new HashMap<String, AttributeGeneratorsComposition>();
@@ -82,7 +89,7 @@ public class DataGenerator {
     private final int apartmentBoundMin = 1;
     private final int apartmentBoundMax = 81;
 
-    public DataGenerator() {
+    public DataGenerator() throws java.sql.SQLException {
         Logger.log("data generator: initialize");
 
         this.initializeAttributeGeneratorsCompositions();
@@ -91,12 +98,14 @@ public class DataGenerator {
         this.initializePersonsCount();
         this.initializeData();
 
+        this.connectToDatabase();
+
         this.initializeAttributeGeneratorsRanges();
         this.initializeAttributeGeneratorsCompositionsValues();
         this.initializeAttributeGeneratorsValues();
     }
 
-    public void generate() {
+    public void generate() throws java.sql.SQLException, java.text.ParseException {
         Logger.log(String.format("data generator: start generating data, for \"%s\" person(s)", this.personsCount));
 
         this.createOutputDirectory();
@@ -104,6 +113,7 @@ public class DataGenerator {
         try {
             Logger.log("data generator: try generate using web site");
             this.generateByInternet();
+            this.writeDataToDatabase();
         } catch (IllegalStateException ex) {
             Logger.log(String.format(
                     "data generator: fail to generate via internet: \"%s\"",
@@ -168,6 +178,10 @@ public class DataGenerator {
 
             currentRow[attributeIndex++] = a;
         }
+    }
+
+    private void connectToDatabase() throws java.sql.SQLException {
+        this.databaseHandler = new DatabaseHandler();
     }
 
     private void initializeAttributeGeneratorsCompositions() {
@@ -350,16 +364,20 @@ public class DataGenerator {
         return pojoUsers;
     }
 
-    private void transformPojoUser(PojoUser[] pojoUsers, int index) {
+    private DatabaseUser[] getDatabaseUsers() throws java.sql.SQLException {
+        return this.databaseHandler.selectRandomUsers(this.personsCount);
+    }
+
+    private void transformUser(IUser[] users, int index) {
         Attribute[] currentRow = this.data[index];
-        PojoUser currentUser = pojoUsers[index];
+        IUser currentUser = users[index];
 
         int attributeIndex = 0;
 
         currentRow[attributeIndex++] = (Attribute) currentUser.getFirstName();
         currentRow[attributeIndex++] = (Attribute) currentUser.getLastName();
 
-        // api doesn't generate patronic names
+        // in case no patronic name
         AttributeText patronicName = currentUser.getPatronicName();
         currentRow[attributeIndex++] = (Attribute) (patronicName != null ? patronicName : new AttributeText(""));
 
@@ -367,13 +385,10 @@ public class DataGenerator {
         currentRow[attributeIndex++] = (Attribute) currentUser.getGender();
 
         // in case date format in api changes and date parsing crashes
-        AttributeDate birthDateProbablyNull = currentUser.getBirthDate();
-        Calendar calendar = new GregorianCalendar();
-        calendar.add(Calendar.YEAR, -1 * currentUser.getAge().getValue());
-        AttributeDate birthDatePredictedIfActualOneIsNull = new AttributeDate(calendar);
-        currentRow[attributeIndex++] = (Attribute) (birthDateProbablyNull != null ? birthDateProbablyNull : birthDatePredictedIfActualOneIsNull);
+        AttributeDate birthDate = currentUser.getBirthDate();
+        currentRow[attributeIndex++] = (Attribute) (birthDate);
 
-        // api doesn't generate INN
+        // in case no INN
         AttributeInn inn = currentUser.getInn();
         currentRow[attributeIndex++] = (Attribute) (
                 inn != null ? inn : this.attributeGenerators.get(this.attributeNames.get("inn")).generate());
@@ -384,7 +399,7 @@ public class DataGenerator {
         currentRow[attributeIndex++] = (Attribute) currentUser.getCity();
         currentRow[attributeIndex++] = (Attribute) currentUser.getStreet();
 
-        // this one is also null
+        // this one may alos be null
         AttributeNumber house = currentUser.getHouse();
         currentRow[attributeIndex++] = (Attribute) (
                 house != null ? house : this.attributeGenerators.get(this.attributeNames.get("house")).generate());
@@ -395,14 +410,42 @@ public class DataGenerator {
                 apartment != null ? apartment : this.attributeGenerators.get(this.attributeNames.get("apartment")).generate());
     }
 
+    private void transformPojoUser(PojoUser[] pojoUsers, int index) {
+        this.transformUser(pojoUsers, index);
+    }
+
+    private void transformDatabaseUser(DatabaseUser[] databaseUsers, int index) {
+        this.transformUser(databaseUsers, index);
+    }
+
     private void transformPojoUsers(PojoUser[] pojoUsers) {
         for (int i = 0; i < this.personsCount; i++) {
             this.transformPojoUser(pojoUsers, i);
         }
     }
 
-    private void generateByOwnMeans() {
-        Logger.log("data generator: generate using own means (resource files and random choice)");
+    private void transformDatabaseUsers(DatabaseUser[] databaseUsers) {
+        for (int i = 0; i < this.personsCount; i++) {
+            this.transformDatabaseUser(databaseUsers, i);
+        }
+    }
+
+    private void generateByOwnMeans() throws java.sql.SQLException {
+        Logger.log("data generator: generate using own means (database, if not empty, or resource files)");
+
+        if (!this.isDatabaseEmpty()) {
+            this.generateByDatabase();
+        } else {
+            this.generateByResourceFiles();
+        }
+
+        for (int i = 0; i < this.personsCount; i++) {
+            this.generatePersonRow(i);
+        }
+    }
+
+    private void generateByResourceFiles() {
+        Logger.log("data generator: generate using resource files and random choice");
 
         for (int i = 0; i < this.personsCount; i++) {
             this.generatePersonRow(i);
@@ -412,5 +455,61 @@ public class DataGenerator {
     private void generateByInternet() throws IOException {
         PojoUser[] pojoUsers = this.getPojoUsers();
         this.transformPojoUsers(pojoUsers);
+    }
+
+    private void generateByDatabase() throws java.sql.SQLException {
+        DatabaseUser[] databaseUsers = this.getDatabaseUsers();
+        this.transformDatabaseUsers(databaseUsers);
+    }
+
+    private void writeDataToDatabase() throws java.sql.SQLException, ParseException {
+        for (int i = 0; i < this.data.length; i++) {
+            Attribute[] currentRow = data[i];
+
+            Date birthdate = new SimpleDateFormat(
+                    AttributeDate.getDateFormat()).parse(currentRow[5].toString());
+            String sex = currentRow[4].toString() == Constants.sexValues.get("female") ?
+                    DatabaseUser.getSexFemale() :
+                    DatabaseUser.getSexMale();
+
+            String patronicName = currentRow[2].toString();
+
+            // TODO: refactor
+            if (patronicName == "") {
+                patronicName = null;
+            }
+
+            // TODO: make some understandable mapping from attributes to indices
+            DatabaseUser user = new DatabaseUser(
+                    currentRow[1].toString(),
+                    currentRow[0].toString(),
+                    patronicName,
+                    birthdate,
+                    sex,
+                    currentRow[6].toString()
+            );
+            DatabaseAddress address = new DatabaseAddress(
+                    currentRow[7].toString(),
+                    currentRow[8].toString(),
+                    currentRow[9].toString(),
+                    currentRow[10].toString(),
+                    currentRow[11].toString(),
+                    Integer.parseInt(currentRow[12].toString()),
+                    Integer.parseInt(currentRow[13].toString())
+            );
+
+            if (this.databaseHandler.isUserExists(
+                    user.getLastName().toString(),
+                    user.getFirstName().toString(),
+                    user.getPatronicName().toString())) {
+                this.databaseHandler.updateUser(user, address);
+            } else {
+                this.databaseHandler.insertUser(user, address);
+            }
+        }
+    }
+
+    private boolean isDatabaseEmpty() throws java.sql.SQLException {
+        return this.databaseHandler.isDatabaseEmpty();
     }
 }
