@@ -1,6 +1,8 @@
 package ru.alexeev.tfs.qa.userdatagenerator.database;
 
 
+import ru.alexeev.tfs.qa.userdatagenerator.Utils;
+
 import java.sql.*;
 
 
@@ -49,7 +51,7 @@ public class DatabaseHandler {
     public boolean isDatabaseEmpty() throws java.sql.SQLException {
         String usersCountColumnAlias = "users_count";
         String query = String.format(
-                "SELECT count(*) AS %s FROM %s",
+                "SELECT count(*) AS %s FROM %s;",
                 usersCountColumnAlias,
                 tablePersonsName
         );
@@ -66,16 +68,16 @@ public class DatabaseHandler {
     }
 
     public boolean isUserExists(String surname, String name, String middlename) throws java.sql.SQLException {
+        if (this.isDatabaseEmpty()) {
+            return false;
+        }
+
         String query = String.format(
-                "SELECT * FROM %s WHERE surname = \"%s\" AND name = \"%s\"",
+                "SELECT * FROM %s WHERE surname = \"%s\" AND name = \"%s\" AND ",
                 tablePersonsName, surname, name
         );
-
-        if (middlename == null) {
-            query += " AND middlename is NULL;";
-        } else {
-            query += String.format(" AND middlename = \"%s\";", middlename);
-        }
+        query += getEqualsConditionForMaybeNullMiddlename(middlename);
+        query += ";";
 
         ResultSet rs = this.getQueryResults(query);
 
@@ -105,7 +107,6 @@ public class DatabaseHandler {
             address_id = this.insertAddressAndGetId(address);
         }
 
-        // TODO: NULL
         String values = String.format(
                 "\"%s\", \"%s\", %s, STR_TO_DATE(\"%s\", \"%s\"), \"%s\", \"%s\", %d",
                 user.surname,
@@ -139,13 +140,9 @@ public class DatabaseHandler {
         sets += String.format(", address_id = %d", address_id);
 
         String condition = String.format(
-                "surname = \"%s\" AND name = \"%s\"",
+                "surname = \"%s\" AND name = \"%s\" AND ",
                 user.surname, user.name);
-        if (user.middlename == null) {
-            condition += " AND middlename is NULL;";
-        } else {
-            condition += String.format(" AND middlename = \"%s\";", user.middlename);
-        }
+        condition += this.getEqualsConditionForMaybeNullMiddlename(user.middlename);
 
         this.updateInTable(tablePersonsName, sets, condition);
     }
@@ -153,7 +150,7 @@ public class DatabaseHandler {
     public DatabaseUser[] selectRandomUsers(int usersCount) throws java.sql.SQLException {
         DatabaseUser[] databaseUsers = new DatabaseUser[usersCount];
         String queryPersons = String.format(
-                "SELECT * FROM %s ORDER BY RAND() LIMIT %d",
+                "SELECT * FROM %s ORDER BY RAND() LIMIT %d;",
                 tablePersonsName, usersCount);
         ResultSet rs = this.getQueryResults(queryPersons);
 
@@ -172,7 +169,7 @@ public class DatabaseHandler {
             int addressId = rs.getInt("address_id");
             DatabaseAddress address = null;
             String queryAddress = String.format(
-                    "SELECT * FROM %s WHERE id = %d",
+                    "SELECT * FROM %s WHERE id = %d;",
                     tableAddressesName, addressId
             );
 
@@ -201,16 +198,8 @@ public class DatabaseHandler {
             databaseUsers[i++] = user;
         }
 
-        if (i < usersCount) {
-            int retreivedUsersCount = i;
-            DatabaseUser[] databaseUsersResult = new DatabaseUser[retreivedUsersCount];
-
-            for (int j = 0; j < retreivedUsersCount; j++) {
-                databaseUsersResult[j] = databaseUsers[j];
-            }
-
-            databaseUsers = databaseUsersResult;
-        }
+        // if there were less users in database than requested
+        databaseUsers = shrinkArrayIfNotFilledCompletely(databaseUsers, usersCount, i);
 
         return databaseUsers;
     }
@@ -312,5 +301,32 @@ public class DatabaseHandler {
         );
 
         this.executeUpdateQuery(query);
+    }
+
+    private String getEqualsConditionForMaybeNullMiddlename(String middlename) {
+        if (middlename == null) {
+            return "middlename is NULL";
+        } else {
+            return String.format("middlename = \"%s\"", middlename);
+        }
+    }
+
+    // TODO: move to Utils
+    static private DatabaseUser[] shrinkArrayIfNotFilledCompletely(DatabaseUser[] array, int countExpected, int countActual) {
+        if (countActual == countExpected) {
+            return array;
+        } else if (countActual > countExpected) {
+            throw new IllegalArgumentException(String.format(
+                    "countActual \"%d\" is bigger than countExpected \"%d\"",
+                    countActual, countExpected));
+        }
+
+        DatabaseUser[] arrayResult = new DatabaseUser[countActual];
+
+        for (int j = 0; j < countActual; j++) {
+            arrayResult[j] = array[j];
+        }
+
+        return arrayResult;
     }
 }

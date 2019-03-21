@@ -85,7 +85,7 @@ public final class PojoUser implements IUser {
     private String transformNationalityToCountry(String nationality) {
         String nationalityInLowerCase = nationality.toLowerCase();
 
-        if (nationalityInLowerCase == "us") {
+        if (nationalityInLowerCase.equals("us") || nationalityInLowerCase.equals("usa")) {
             return "USA";
         } else {
             return Constants.undefinedCountry;

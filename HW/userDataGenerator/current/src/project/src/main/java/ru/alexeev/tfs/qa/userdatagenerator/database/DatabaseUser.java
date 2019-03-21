@@ -76,6 +76,10 @@ public class DatabaseUser implements IUser {
     }
 
     public AttributeText getPatronicName() {
+        if (this.middlename == null) {
+            return null;
+        }
+
         return new AttributeText(this.middlename);
     }
 
@@ -107,10 +111,14 @@ public class DatabaseUser implements IUser {
     }
 
     public AttributeInn getInn() {
+        if (this.inn == null) {
+            return null;
+        }
+
         int[] numbers = new int[this.inn.length()];
 
         for (int i = 0; i < this.inn.length(); i++) {
-            Integer.parseInt(Character.toString(this.inn.charAt(i)));
+            numbers[i] = Integer.parseInt(Character.toString(this.inn.charAt(i)));
         }
 
         return new AttributeInn(numbers);

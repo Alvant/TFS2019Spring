@@ -57,6 +57,25 @@ public class DataGenerator {
         }
     };
 
+    private Map<String, Integer> attributeIndices = new LinkedHashMap<String, Integer>() {
+        {
+            put("first-name", 0);
+            put("last-name", 1);
+            put("patronic-name", 2);
+            put("age", 3);
+            put("sex", 4);
+            put("birth-date", 5);
+            put("inn", 6);
+            put("postal-index", 7);
+            put("country", 8);
+            put("region", 9);
+            put("city", 10);
+            put("street", 11);
+            put("house", 12);
+            put("apartment", 13);
+        }
+    };
+
     private final String[] sexDependentAttributes = {
             attributeNames.get("first-name"),
             attributeNames.get("last-name"),
@@ -436,16 +455,14 @@ public class DataGenerator {
         if (!this.isDatabaseEmpty()) {
             this.generateByDatabase();
         } else {
+            Logger.log("data generator: database seems to be empty :(");
             this.generateByResourceFiles();
-        }
-
-        for (int i = 0; i < this.personsCount; i++) {
-            this.generatePersonRow(i);
         }
     }
 
     private void generateByResourceFiles() {
-        Logger.log("data generator: generate using resource files and random choice");
+        Logger.log("data generator: generate users " +
+                "using resource files and random choice");
 
         for (int i = 0; i < this.personsCount; i++) {
             this.generatePersonRow(i);
@@ -453,12 +470,18 @@ public class DataGenerator {
     }
 
     private void generateByInternet() throws IOException {
+        Logger.log("data generator: generate users using web api");
+
         PojoUser[] pojoUsers = this.getPojoUsers();
         this.transformPojoUsers(pojoUsers);
     }
 
     private void generateByDatabase() throws java.sql.SQLException {
+        Logger.log("data generator: select users from database");
+
         DatabaseUser[] databaseUsers = this.getDatabaseUsers();
+        this.reducePersonsCountIfNeeded(databaseUsers.length);
+
         this.transformDatabaseUsers(databaseUsers);
     }
 
@@ -467,41 +490,41 @@ public class DataGenerator {
             Attribute[] currentRow = data[i];
 
             Date birthdate = new SimpleDateFormat(
-                    AttributeDate.getDateFormat()).parse(currentRow[5].toString());
-            String sex = currentRow[4].toString() == Constants.sexValues.get("female") ?
+                    AttributeDate.getDateFormat()).parse(
+                            currentRow[this.attributeIndices.get("birth-date")].toString()
+            );
+            String sex = currentRow[this.attributeIndices.get("sex")].toString() == Constants.sexValues.get("female") ?
                     DatabaseUser.getSexFemale() :
                     DatabaseUser.getSexMale();
 
-            String patronicName = currentRow[2].toString();
+            String patronicName = currentRow[this.attributeIndices.get("patronic-name")].toString();
 
-            // TODO: refactor
             if (patronicName == "") {
                 patronicName = null;
             }
 
-            // TODO: make some understandable mapping from attributes to indices
             DatabaseUser user = new DatabaseUser(
-                    currentRow[1].toString(),
-                    currentRow[0].toString(),
+                    currentRow[this.attributeIndices.get("last-name")].toString(),
+                    currentRow[this.attributeIndices.get("first-name")].toString(),
                     patronicName,
                     birthdate,
                     sex,
-                    currentRow[6].toString()
+                    currentRow[this.attributeIndices.get("inn")].toString()
             );
             DatabaseAddress address = new DatabaseAddress(
-                    currentRow[7].toString(),
-                    currentRow[8].toString(),
-                    currentRow[9].toString(),
-                    currentRow[10].toString(),
-                    currentRow[11].toString(),
-                    Integer.parseInt(currentRow[12].toString()),
-                    Integer.parseInt(currentRow[13].toString())
+                    currentRow[this.attributeIndices.get("postal-index")].toString(),
+                    currentRow[this.attributeIndices.get("country")].toString(),
+                    currentRow[this.attributeIndices.get("region")].toString(),
+                    currentRow[this.attributeIndices.get("city")].toString(),
+                    currentRow[this.attributeIndices.get("street")].toString(),
+                    Integer.parseInt(currentRow[this.attributeIndices.get("house")].toString()),
+                    Integer.parseInt(currentRow[this.attributeIndices.get("apartment")].toString())
             );
 
             if (this.databaseHandler.isUserExists(
                     user.getLastName().toString(),
                     user.getFirstName().toString(),
-                    user.getPatronicName().toString())) {
+                    patronicName == null ? patronicName : user.getPatronicName().toString())) {
                 this.databaseHandler.updateUser(user, address);
             } else {
                 this.databaseHandler.insertUser(user, address);
@@ -511,5 +534,28 @@ public class DataGenerator {
 
     private boolean isDatabaseEmpty() throws java.sql.SQLException {
         return this.databaseHandler.isDatabaseEmpty();
+    }
+
+    private void reducePersonsCountIfNeeded(int newPersonsCount) {
+        if (newPersonsCount < this.personsCount) {
+            this.personsCount = newPersonsCount;
+            this.reduceData(newPersonsCount);
+        } else if (newPersonsCount == this.personsCount) {
+            return;
+        } else {
+            throw new IllegalArgumentException(String.format(
+                    "New personsCount \"%d\" is bigger than current value \"%d\"",
+                    newPersonsCount, this.personsCount));
+        }
+    }
+
+    private void reduceData(int newPersonsCount) {
+        Attribute[][] newData = new Attribute[this.personsCount][this.data[0].length];
+        System.arraycopy(
+                this.data, 0,
+                newData, 0,
+                newPersonsCount
+        );
+        this.data = newData;
     }
 }
