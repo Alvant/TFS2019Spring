@@ -3,7 +3,7 @@ package ru.alexeev.tfs.qa.userdatagenerator.attribute;
 
 public class AttributeInn extends Attribute {
 
-    private static int length = 12;
+    public static final int length = 12;
     private int[] numbers;
 
     public AttributeInn(int[] numbers) {

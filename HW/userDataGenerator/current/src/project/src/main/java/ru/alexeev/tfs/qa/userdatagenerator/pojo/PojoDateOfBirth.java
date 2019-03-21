@@ -5,6 +5,8 @@ import ru.alexeev.tfs.qa.userdatagenerator.attribute.AttributeDate;
 import ru.alexeev.tfs.qa.userdatagenerator.attribute.AttributeNumber;
 
 import java.text.ParseException;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 
 
 public class PojoDateOfBirth {
@@ -25,8 +27,10 @@ public class PojoDateOfBirth {
         try {
             return new AttributeDate(this.date, dateFormat);
         } catch (ParseException ex) {
-            ex.printStackTrace();
-            return emptyDate;
+            Calendar calendar = new GregorianCalendar();
+            calendar.add(Calendar.YEAR, -1 * this.age);
+            AttributeDate birthDatePredicted = new AttributeDate(calendar);
+            return birthDatePredicted;
         }
     }
 

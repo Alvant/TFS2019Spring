@@ -10,6 +10,8 @@ import java.text.SimpleDateFormat;
 
 public class AttributeDate extends Attribute {
 
+    private static final String dateFormatString = "dd-MM-YYYY";
+
     private Calendar calendar = new GregorianCalendar();
     private DateFormat dateFormat = new SimpleDateFormat("dd-MM-YYYY");
 
@@ -27,6 +29,10 @@ public class AttributeDate extends Attribute {
 
     public AttributeDate(int year, int month, int dayOfMonth) {
         this.setDate(year, month, dayOfMonth);
+    }
+
+    public static String getDateFormat() {
+        return dateFormatString;
     }
 
     @Override
