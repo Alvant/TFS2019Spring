@@ -5,6 +5,7 @@ out/
 # Others
 *.class
 *.iml
+tmp
 
 # Database
 DatabaseParameters.java
