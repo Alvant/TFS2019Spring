@@ -17,6 +17,7 @@ public class Application {
 
     public final String browserName = System.getProperty("browser") == null ? "chrome" : System.getProperty("browser");
     public WebDriver driver;
+    public Ui ui;
     private WebDriverWait wait;
 
     public Application() throws MalformedURLException {
@@ -25,6 +26,8 @@ public class Application {
         wait = new WebDriverWait(driver, 10);
         driver.manage().window().maximize();
         driver.manage().timeouts().implicitlyWait(5, TimeUnit.SECONDS);
+
+        ui = new Ui(driver);
     }
 
     public void quit() {
