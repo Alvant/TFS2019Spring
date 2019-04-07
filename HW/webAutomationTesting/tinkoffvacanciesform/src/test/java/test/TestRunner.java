@@ -10,6 +10,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -104,11 +105,22 @@ public class TestRunner extends BaseRunner {
         this.app.driver.findElement(By.cssSelector("a[href=\"https://www.tinkoff.ru/mobile-operator/tariffs/\"]"))
                 .click();
 
+        ArrayList tabs = new ArrayList (this.app.driver.getWindowHandles());
+        System.out.println(tabs.size());
+        String currentHandle = (String) tabs.get(1);
+        this.app.driver.switchTo().window(currentHandle);
+
+        this.app.driver.manage().timeouts().implicitlyWait(0, TimeUnit.MILLISECONDS);
+        boolean exists = this.app.driver.findElements( By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]") ).size() != 0;
+        this.app.driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
+
+        if (exists) {
+            this.app.driver.findElement(By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]")).click();
+        }
         assertEquals(
                 "Тарифы Тинькофф Мобайла",
                 this.app.driver.findElement(By.cssSelector("[name=\"titleAndSubtitleBlock\"] h2")).getText());
 
-        String currentHandle = this.app.driver.getWindowHandle();
         for(String handle : this.app.driver.getWindowHandles()) {
             if (!handle.equals(currentHandle)) {
                 this.app.driver.switchTo().window(handle);
