@@ -107,18 +107,9 @@ public class TestRunner extends BaseRunner {
         this.app.driver.findElement(By.cssSelector("a[href=\"https://www.tinkoff.ru/mobile-operator/tariffs/\"]"))
                 .click();
 
-        ArrayList tabs = new ArrayList (this.app.driver.getWindowHandles());
-        System.out.println(tabs.size());
-        String currentHandle = (String) tabs.get(1);
-        this.app.driver.switchTo().window(currentHandle);
+        String currentHandle = this.getNthTabAndCheckout(1);
+        this.confirmRegionIfConfirmationExists();
 
-        this.app.driver.manage().timeouts().implicitlyWait(0, TimeUnit.MILLISECONDS);
-        boolean exists = this.app.driver.findElements( By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]") ).size() != 0;
-        this.app.driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
-
-        if (exists) {
-            this.app.driver.findElement(By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]")).click();
-        }
         assertEquals(
                 "Тарифы Тинькофф Мобайла",
                 this.app.driver.findElement(By.cssSelector("[name=\"titleAndSubtitleBlock\"] h2")).getText());
@@ -151,24 +142,11 @@ public class TestRunner extends BaseRunner {
 
         WebDriverWait wait = new WebDriverWait(this.app.driver, 10);
 
-        final Pattern p = Pattern.compile("Общая цена: ([\\d|\\s]+) \u20BD");
-        Matcher m;
-
         this.app.driver.get("https://www.tinkoff.ru/mobile-operator/tariffs/");
-
-        // ***
-        //this.app.driver.manage().timeouts().implicitlyWait(0, TimeUnit.MILLISECONDS);
-        boolean exists = this.app.driver.findElements( By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]") ).size() != 0;
-        //this.app.driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
-
-        if (exists) {
-            this.app.driver.findElement(By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]")).click();
-        }
-        // ***
+        this.confirmRegionIfConfirmationExists();
 
         this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]"))
                 .click();
-        System.out.println(String.format("//div[text()=\"%s\"]", regionTitlesShort.get("moskva")));
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[text()=\"Выберите регион\"]")));
         this.app.driver.findElement(By.xpath(String.format("//div[text()=\"%s\"]", regionTitlesShort.get("moskva"))))
                 .click();
@@ -179,6 +157,7 @@ public class TestRunner extends BaseRunner {
                         .getText()
         );
 
+        // refresh and check if region stays
         this.app.driver.navigate().refresh();
         assertEquals(
                 regionTitlesFull.get("moskva"),
@@ -193,11 +172,10 @@ public class TestRunner extends BaseRunner {
             this.app.driver.findElement(By.xpath(String.format("//div[text()=\"%s\"]", regionTitlesShort.get(region))))
                     .click();
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[contains(text(), \"Общая цена\")]")));
-            m = p.matcher(this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\")]")).getText());
-            assertEquals(true, m.find());
+
             regionPricesDefault.put(
                     region,
-                    Integer.parseInt(String.join("", m.group(1).split("\\s")))
+                    Integer.parseInt(String.join("", this.getTotalPriceMatch().group(1).split("\\s")))
             );
 
             this.app.driver.findElement(By.xpath("//span[contains(@class, \"select\") and text()=\"Интернет\"]"))
@@ -210,11 +188,9 @@ public class TestRunner extends BaseRunner {
             this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"Безлимитные минуты\"]]"))
                     .click();
 
-            m = p.matcher(this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\")]")).getText());
-            assertEquals(true, m.find());
             regionPricesFull.put(
                     region,
-                    Integer.parseInt(String.join("", m.group(1).split("\\s")))
+                    Integer.parseInt(String.join("", this.getTotalPriceMatch().group(1).split("\\s")))
             );
         }
 
@@ -232,8 +208,6 @@ public class TestRunner extends BaseRunner {
     @Test
     public void test5() {
         String finalPrice;
-        final Pattern p = Pattern.compile("Общая цена: ([\\d|\\s]+ \u20BD)");
-        Matcher m;
 
         this.app.driver.get("https://www.tinkoff.ru/mobile-operator/tariffs/");
 
@@ -247,25 +221,9 @@ public class TestRunner extends BaseRunner {
         this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"0 минут\"]]"))
                 .click();
 
-        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2050\"]")).isSelected() ) {
-            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2050\"]]")).click();
-        }
-        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2053\"]")).isSelected() ) {
-            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2053\"]]")).click();
-        }
-        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2046\"]")).isSelected() ) {
-            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2046\"]]")).click();
-        }
-        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2047\"]")).isSelected() ) {
-            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2047\"]]")).click();
-        }
-        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2048\"]")).isSelected() ) {
-            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2048\"]]")).click();
-        }
+        this.uncheckAllCheckboxes();
 
-        m = p.matcher(this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\")]")).getText());
-        assertEquals(true, m.find());
-        finalPrice = m.group(1);
+        finalPrice = this.getTotalPriceMatch().group(2);
 
         assertEquals("0 \u20BD", finalPrice);
         assertEquals(true, this.app.driver.findElement(By.xpath("//div[text()=\"Заказать сим-карту\"]")).isEnabled());
@@ -278,5 +236,59 @@ public class TestRunner extends BaseRunner {
 
     private void clickOnFormHeader() {
         this.app.driver.findElement(By.xpath("//div[text()=\"Заполните анкету\"]")).click();
+    }
+
+    private String getNthTabAndCheckout(int nth) {
+        ArrayList tabs = new ArrayList (this.app.driver.getWindowHandles());
+        String targetHandle = (String) tabs.get(nth);
+        this.app.driver.switchTo().window(targetHandle);
+
+        return targetHandle;
+    }
+
+    private boolean checkIfElementExists(By control) {
+        boolean isExists = false;
+
+        try {
+            this.app.driver.manage().timeouts().implicitlyWait(0, TimeUnit.MILLISECONDS);
+            isExists = this.app.driver.findElements(control).size() != 0;
+        } catch (Error e) {
+            e.printStackTrace();
+        } finally {
+            this.app.driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
+        }
+
+        return isExists;
+    }
+
+    private Matcher getTotalPriceMatch() {
+        final Pattern p = Pattern.compile("Общая цена: (([\\d|\\s]+) \u20BD)");
+        Matcher m;
+
+        m = p.matcher(this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\")]")).getText());
+
+        if (m.find() != true) {
+            throw new IllegalStateException("Price not found on page");
+        }
+
+        return m;
+    }
+
+    private void confirmRegionIfConfirmationExists() {
+        boolean isRegionConfirmationExists = this.checkIfElementExists(By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]"));
+
+        if (isRegionConfirmationExists) {
+            this.app.driver.findElement(By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]")).click();
+        }
+    }
+
+    private void uncheckAllCheckboxes() {
+        String checkboxesIds[] = {"2050", "2053", "2046", "2047", "2048"};
+
+        for (String id : checkboxesIds) {
+            if (this.app.driver.findElement(By.xpath(String.format("//input[@id=\"%s\"]", id))).isSelected()) {
+                this.app.driver.findElement(By.xpath(String.format("//input[@id=\"%s\"]", id))).click();
+            }
+        }
     }
 }
