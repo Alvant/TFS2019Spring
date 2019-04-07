@@ -1,6 +1,10 @@
 package test;
 
 
+import app.Ui;
+import extensions.Ui.Checkbox;
+import extensions.Ui.Select;
+import extensions.Ui.SelectOption;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -98,29 +102,19 @@ public class TestRunner extends BaseRunner {
     public void test3() {
         this.app.driver.get("https://www.google.ru/");
 
-        this.app.driver.findElement(By.name("q"))
-                .clear();
-        this.app.driver.findElement(By.name("q"))
-                .sendKeys("мобайл тинькофф");
-        this.app.driver.findElement(By.xpath("//span[text()=\"мобайл тинькофф\"][./b[text()=\" тарифы\"]]"))
-                .click();
-        this.app.driver.findElement(By.cssSelector("a[href=\"https://www.tinkoff.ru/mobile-operator/tariffs/\"]"))
-                .click();
+        this.app.driver.findElement(By.name("q")).clear();
+        this.app.driver.findElement(By.name("q")).sendKeys("мобайл тинькофф");
+        this.app.driver.findElement(By.xpath("//span[text()=\"мобайл тинькофф\"][./b[text()=\" тарифы\"]]")).click();
+        this.app.driver.findElement(By.cssSelector("a[href=\"https://www.tinkoff.ru/mobile-operator/tariffs/\"]")).click();
 
-        String currentHandle = this.getNthTabAndCheckout(1);
+        String currentHandle = this.getNthTabAndSwitchTo(1);
         this.confirmRegionIfConfirmationExists();
 
         assertEquals(
                 "Тарифы Тинькофф Мобайла",
                 this.app.driver.findElement(By.cssSelector("[name=\"titleAndSubtitleBlock\"] h2")).getText());
 
-        for(String handle : this.app.driver.getWindowHandles()) {
-            if (!handle.equals(currentHandle)) {
-                this.app.driver.switchTo().window(handle);
-                this.app.driver.close();
-            }
-        }
-        this.app.driver.switchTo().window(currentHandle);
+        this.closeAllTabsExceptAndSwitchTo(currentHandle);
 
         assertEquals(
                 "https://www.tinkoff.ru/mobile-operator/tariffs/",
@@ -140,57 +134,42 @@ public class TestRunner extends BaseRunner {
         regionTitlesShort.put("moskva", "Москва и Московская обл.");
         regionTitlesShort.put("krasnodar", "Краснодарский кр.");
 
-        WebDriverWait wait = new WebDriverWait(this.app.driver, 10);
-
         this.app.driver.get("https://www.tinkoff.ru/mobile-operator/tariffs/");
         this.confirmRegionIfConfirmationExists();
 
-        this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]"))
-                .click();
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[text()=\"Выберите регион\"]")));
-        this.app.driver.findElement(By.xpath(String.format("//div[text()=\"%s\"]", regionTitlesShort.get("moskva"))))
-                .click();
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[contains(text(), \"Общая цена\")]")));
+        this.selectRegion(regionTitlesShort.get("moskva"));
         assertEquals(
                 regionTitlesFull.get("moskva"),
-                this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]"))
-                        .getText()
+                this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]")).getText()
         );
 
         // refresh and check if region stays
         this.app.driver.navigate().refresh();
         assertEquals(
                 regionTitlesFull.get("moskva"),
-                this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]"))
-                        .getText()
+                this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]")).getText()
         );
 
         for (String region : regionTitlesFull.keySet()) {
-            this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]"))
-                    .click();
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[text()=\"Выберите регион\"]")));
-            this.app.driver.findElement(By.xpath(String.format("//div[text()=\"%s\"]", regionTitlesShort.get(region))))
-                    .click();
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[contains(text(), \"Общая цена\")]")));
-
+            this.selectRegion(regionTitlesShort.get(region));
             regionPricesDefault.put(
                     region,
-                    Integer.parseInt(String.join("", this.getTotalPriceMatch().group(1).split("\\s")))
+                    Integer.parseInt(String.join("", this.getTotalPriceMatch().group(2).split("\\s")))
             );
 
-            this.app.driver.findElement(By.xpath("//span[contains(@class, \"select\") and text()=\"Интернет\"]"))
-                    .click();
-            this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"Безлимитный интернет\"]]"))
-                    .click();
+            Ui.selectOption(
+                    new Select("Интернет"),
+                    new SelectOption("Безлимитный интернет")
+            );
 
-            this.app.driver.findElement(By.xpath("//span[contains(@class, \"select\") and text()=\"Звонки\"]"))
-                    .click();
-            this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"Безлимитные минуты\"]]"))
-                    .click();
+            Ui.selectOption(
+                    new Select("Звонки"),
+                    new SelectOption("Безлимитные минуты")
+            );
 
             regionPricesFull.put(
                     region,
-                    Integer.parseInt(String.join("", this.getTotalPriceMatch().group(1).split("\\s")))
+                    Integer.parseInt(String.join("", this.getTotalPriceMatch().group(2).split("\\s")))
             );
         }
 
@@ -211,19 +190,19 @@ public class TestRunner extends BaseRunner {
 
         this.app.driver.get("https://www.tinkoff.ru/mobile-operator/tariffs/");
 
-        this.app.driver.findElement(By.xpath("//span[contains(@class, \"select\") and text()=\"Интернет\"]"))
-                .click();
-        this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"0 ГБ\"]]"))
-                .click();
+        Ui.selectOption(
+                new Select("Интернет"),
+                new SelectOption("0 ГБ")
+        );
 
-        this.app.driver.findElement(By.xpath("//span[contains(@class, \"select\") and text()=\"Звонки\"]"))
-                .click();
-        this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"0 минут\"]]"))
-                .click();
+        Ui.selectOption(
+                new Select("Звонки"),
+                new SelectOption("0 минут")
+        );
 
         this.uncheckAllCheckboxes();
 
-        finalPrice = this.getTotalPriceMatch().group(2);
+        finalPrice = this.getTotalPriceMatch().group(1);
 
         assertEquals("0 \u20BD", finalPrice);
         assertEquals(true, this.app.driver.findElement(By.xpath("//div[text()=\"Заказать сим-карту\"]")).isEnabled());
@@ -238,7 +217,7 @@ public class TestRunner extends BaseRunner {
         this.app.driver.findElement(By.xpath("//div[text()=\"Заполните анкету\"]")).click();
     }
 
-    private String getNthTabAndCheckout(int nth) {
+    private String getNthTabAndSwitchTo(int nth) {
         ArrayList tabs = new ArrayList (this.app.driver.getWindowHandles());
         String targetHandle = (String) tabs.get(nth);
         this.app.driver.switchTo().window(targetHandle);
@@ -246,7 +225,18 @@ public class TestRunner extends BaseRunner {
         return targetHandle;
     }
 
-    private boolean checkIfElementExists(By control) {
+    private void closeAllTabsExceptAndSwitchTo(String targetHandle) {
+        for(String handle : this.app.driver.getWindowHandles()) {
+            if (!handle.equals(targetHandle)) {
+                this.app.driver.switchTo().window(handle);
+                this.app.driver.close();
+            }
+        }
+
+        this.app.driver.switchTo().window(targetHandle);
+    }
+
+    private boolean isElementExists(By control) {
         boolean isExists = false;
 
         try {
@@ -275,20 +265,33 @@ public class TestRunner extends BaseRunner {
     }
 
     private void confirmRegionIfConfirmationExists() {
-        boolean isRegionConfirmationExists = this.checkIfElementExists(By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]"));
+        By regionConfirmation = By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]");
 
-        if (isRegionConfirmationExists) {
-            this.app.driver.findElement(By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]")).click();
+        if (this.isElementExists(regionConfirmation)) {
+            this.app.driver.findElement(regionConfirmation).click();
         }
     }
 
     private void uncheckAllCheckboxes() {
-        String checkboxesIds[] = {"2050", "2053", "2046", "2047", "2048"};
+        String checkboxesNames[] = {
+                "Мессенджеры",
+                "Социальные сети",
+                "Безлимитные СМС",
+                "Музыка",
+                "Видео"
+        };
 
-        for (String id : checkboxesIds) {
-            if (this.app.driver.findElement(By.xpath(String.format("//input[@id=\"%s\"]", id))).isSelected()) {
-                this.app.driver.findElement(By.xpath(String.format("//input[@id=\"%s\"]", id))).click();
-            }
+        for (String name : checkboxesNames) {
+            Ui.setUnchecked(new Checkbox(name));
         }
+    }
+
+    private void selectRegion(String regionName) {
+        WebDriverWait wait = new WebDriverWait(this.app.driver, 10);
+
+        this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]")).click();
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[text()=\"Выберите регион\"]")));
+        this.app.driver.findElement(By.xpath(String.format("//div[text()=\"%s\"]", regionName))).click();
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[contains(text(), \"Общая цена\")]")));
     }
 }

@@ -7,38 +7,44 @@ import extensions.Ui.TextInput;
 import org.openqa.selenium.WebDriver;
 
 public class Ui {
-    private WebDriver driver;
+    private static WebDriver driver;
 
     public Ui(WebDriver driver) {
-        this.driver = driver;
+        Ui.driver = driver;
     }
 
-    public String getValue(TextInput input) {
-        return this.driver.findElement(input.get()).getText();
+    public static String getValue(TextInput input) {
+        return driver.findElement(input.get()).getText();
     }
 
-    public void setValue(TextInput input, String value) {
-        this.driver.findElement(input.get()).sendKeys(value);
+    public static void setValue(TextInput input, String value) {
+        driver.findElement(input.get()).sendKeys(value);
     }
 
-    public void selectOption(Select s, SelectOption o) {
-        this.driver.findElement(s.get()).click();
-        this.driver.findElement(o.get()).click();
+    public static void selectOption(Select s, SelectOption o) {
+        driver.findElement(s.get()).click();
+        driver.findElement(o.get()).click();
     }
 
-    public String getSelectedOption(Select s) {
-        return this.driver.findElement(s.get()).getText();
+    public static String getSelectedOption(Select s) {
+        return driver.findElement(s.get()).getText();
     }
 
-    public void setChecked(Checkbox cb) {
-        this.driver.findElement(cb.get()).click();
+    public static void setChecked(Checkbox cb) {
+        driver.findElement(cb.getCheckControl()).click();
     }
 
-    public boolean isChecked(Checkbox cb) {
-        return this.driver.findElement(cb.get()).isSelected();
+    public static boolean isChecked(Checkbox cb) {
+        return driver.findElement(cb.get()).isSelected();
     }
 
-    public String getCheckboxVisibleName(Checkbox cb) {
-        return this.driver.findElement(cb.getName()).getText();
+    public static void setUnchecked(Checkbox cb) {
+        if (Ui.isChecked(cb)) {
+            Ui.setChecked(cb);
+        }
+    }
+
+    public static String getCheckboxVisibleName(Checkbox cb) {
+        return driver.findElement(cb.getNameControl()).getText();
     }
 }
