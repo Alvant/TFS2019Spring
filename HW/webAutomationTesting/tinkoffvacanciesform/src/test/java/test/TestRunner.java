@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class TestRunner extends BaseRunner {
@@ -144,18 +146,33 @@ public class TestRunner extends BaseRunner {
         regionTitlesFull.put("moskva", "Москва и Московская область");
         regionTitlesFull.put("krasnodar", "Краснодарский край");
 
-        regionTitlesFull.put("moskva", "Москва и Московская обл.");
-        regionTitlesFull.put("krasnodar", "Краснодарский кр.");
+        regionTitlesShort.put("moskva", "Москва и Московская обл.");
+        regionTitlesShort.put("krasnodar", "Краснодарский кр.");
 
         WebDriverWait wait = new WebDriverWait(this.app.driver, 10);
 
+        final Pattern p = Pattern.compile("Общая цена: ([\\d|\\s]+) \u20BD");
+        Matcher m;
+
         this.app.driver.get("https://www.tinkoff.ru/mobile-operator/tariffs/");
+
+        // ***
+        //this.app.driver.manage().timeouts().implicitlyWait(0, TimeUnit.MILLISECONDS);
+        boolean exists = this.app.driver.findElements( By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]") ).size() != 0;
+        //this.app.driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
+
+        if (exists) {
+            this.app.driver.findElement(By.xpath("//span[text()=\"Да\" and contains(@class, \"MvnoRegionConfirmation\")]")).click();
+        }
+        // ***
 
         this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]"))
                 .click();
+        System.out.println(String.format("//div[text()=\"%s\"]", regionTitlesShort.get("moskva")));
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[text()=\"Выберите регион\"]")));
         this.app.driver.findElement(By.xpath(String.format("//div[text()=\"%s\"]", regionTitlesShort.get("moskva"))))
                 .click();
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[contains(text(), \"Общая цена\"")));
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[contains(text(), \"Общая цена\")]")));
         assertEquals(
                 regionTitlesFull.get("moskva"),
                 this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]"))
@@ -172,35 +189,32 @@ public class TestRunner extends BaseRunner {
         for (String region : regionTitlesFull.keySet()) {
             this.app.driver.findElement(By.xpath("//div[contains(@class, \"MvnoRegionConfirmation__title\")]"))
                     .click();
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[text()=\"Выберите регион\"]")));
             this.app.driver.findElement(By.xpath(String.format("//div[text()=\"%s\"]", regionTitlesShort.get(region))))
                     .click();
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[contains(text(), \"Общая цена\"")));
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h3[contains(text(), \"Общая цена\")]")));
+            m = p.matcher(this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\")]")).getText());
+            assertEquals(true, m.find());
             regionPricesDefault.put(
                     region,
-                    Integer.parseInt(
-                            this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\""))
-                                    .getText()
-                                    .split("\\s")[2]
-                    )
+                    Integer.parseInt(String.join("", m.group(1).split("\\s")))
             );
 
             this.app.driver.findElement(By.xpath("//span[contains(@class, \"select\") and text()=\"Интернет\"]"))
                     .click();
-            this.app.driver.findElement(By.xpath("//span[contains(@class, \"dropdown\") and text()=\"Безлимитный интернет\"]"))
+            this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"Безлимитный интернет\"]]"))
                     .click();
 
             this.app.driver.findElement(By.xpath("//span[contains(@class, \"select\") and text()=\"Звонки\"]"))
                     .click();
-            this.app.driver.findElement(By.xpath("//span[contains(@class, \"dropdown\") and text()=\"Безлимитные минуты\"]"))
+            this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"Безлимитные минуты\"]]"))
                     .click();
 
+            m = p.matcher(this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\")]")).getText());
+            assertEquals(true, m.find());
             regionPricesFull.put(
                     region,
-                    Integer.parseInt(
-                            this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\""))
-                                    .getText()
-                                    .split("\\s")[2]
-                    )
+                    Integer.parseInt(String.join("", m.group(1).split("\\s")))
             );
         }
 
@@ -247,7 +261,7 @@ public class TestRunner extends BaseRunner {
             this.app.driver.findElement(By.cssSelector("input[id=\"2048\"]")).click();
         }
 
-        finalPrice = this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\""))
+        finalPrice = this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\")]"))
                         .getText()
                         .split(" ")[2];
 
