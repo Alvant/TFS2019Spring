@@ -232,38 +232,40 @@ public class TestRunner extends BaseRunner {
     @Test
     public void test5() {
         String finalPrice;
+        final Pattern p = Pattern.compile("Общая цена: ([\\d|\\s]+ \u20BD)");
+        Matcher m;
 
         this.app.driver.get("https://www.tinkoff.ru/mobile-operator/tariffs/");
 
         this.app.driver.findElement(By.xpath("//span[contains(@class, \"select\") and text()=\"Интернет\"]"))
                 .click();
-        this.app.driver.findElement(By.xpath("//span[contains(@class, \"dropdown\") and text()=\"0 ГБ\"]"))
+        this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"0 ГБ\"]]"))
                 .click();
 
         this.app.driver.findElement(By.xpath("//span[contains(@class, \"select\") and text()=\"Звонки\"]"))
                 .click();
-        this.app.driver.findElement(By.xpath("//span[contains(@class, \"dropdown\") and text()=\"0 минут \"]"))
+        this.app.driver.findElement(By.xpath("//div[./span[contains(@class, \"dropdown\") and text()=\"0 минут\"]]"))
                 .click();
 
-        if ( !this.app.driver.findElement(By.cssSelector("input[id=\"2050\"]")).isSelected() ) {
-            this.app.driver.findElement(By.cssSelector("input[id=\"2050\"]")).click();
+        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2050\"]")).isSelected() ) {
+            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2050\"]]")).click();
         }
-        if ( !this.app.driver.findElement(By.cssSelector("input[id=\"2053\"]")).isSelected() ) {
-            this.app.driver.findElement(By.cssSelector("input[id=\"2053\"]")).click();
+        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2053\"]")).isSelected() ) {
+            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2053\"]]")).click();
         }
-        if ( !this.app.driver.findElement(By.cssSelector("input[id=\"2046\"]")).isSelected() ) {
-            this.app.driver.findElement(By.cssSelector("input[id=\"2046\"]")).click();
+        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2046\"]")).isSelected() ) {
+            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2046\"]]")).click();
         }
-        if ( !this.app.driver.findElement(By.cssSelector("input[id=\"2047\"]")).isSelected() ) {
-            this.app.driver.findElement(By.cssSelector("input[id=\"2047\"]")).click();
+        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2047\"]")).isSelected() ) {
+            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2047\"]]")).click();
         }
-        if ( !this.app.driver.findElement(By.cssSelector("input[id=\"2048\"]")).isSelected() ) {
-            this.app.driver.findElement(By.cssSelector("input[id=\"2048\"]")).click();
+        if ( this.app.driver.findElement(By.xpath("//input[@id=\"2048\"]")).isSelected() ) {
+            this.app.driver.findElement(By.xpath("//div[./input[@id=\"2048\"]]")).click();
         }
 
-        finalPrice = this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\")]"))
-                        .getText()
-                        .split(" ")[2];
+        m = p.matcher(this.app.driver.findElement(By.xpath("//h3[contains(text(), \"Общая цена\")]")).getText());
+        assertEquals(true, m.find());
+        finalPrice = m.group(1);
 
         assertEquals("0 \u20BD", finalPrice);
         assertEquals(true, this.app.driver.findElement(By.xpath("//div[text()=\"Заказать сим-карту\"]")).isEnabled());
