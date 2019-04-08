@@ -6,13 +6,12 @@ import extensions.Ui.Checkbox;
 import extensions.Ui.Select;
 import extensions.Ui.SelectOption;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import pages.TinkoffVacanciesPage;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,79 +22,77 @@ import java.util.regex.Pattern;
 
 
 public class TestRunner extends BaseRunner {
-    private String baseUrl = "https://www.tinkoff.ru/career/vacancies/";
-
     @Test
     public void test1() {
-        this.app.driver.get(baseUrl);
+        TinkoffVacanciesPage.open();
 
-        this.app.driver.findElement(By.name("name")).click();
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickName();
+        TinkoffVacanciesPage.clickOnFormHeader();
 
-        this.app.driver.findElement(By.name("birthday")).click();
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickBirthday();
+        TinkoffVacanciesPage.clickOnFormHeader();
         assertEquals(
                 "Поле обязательное",
-                this.app.driver.findElement(By.xpath("//div[@data-qa-file=\"CareerForm\"]//div[contains(@class, \"ui-inputdate\")][.//span[text()=\"Дата рождения\"]]/following-sibling::div[contains(@class,\"error-message\")]")).getText());
+                TinkoffVacanciesPage.getEmptyBirthdayErrorMessageText());
 
-        this.app.driver.findElement(By.name("city")).click();
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickCity();
+        TinkoffVacanciesPage.clickOnFormHeader();
 
-        this.app.driver.findElement(By.name("email")).click();
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickEmail();
+        TinkoffVacanciesPage.clickOnFormHeader();
 
-        this.app.driver.findElement(By.name("phone")).click();
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickPhone();
+        TinkoffVacanciesPage.clickOnFormHeader();
 
-        this.app.driver.findElement(By.name("socialLink0")).click();
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickSocialLink();
+        TinkoffVacanciesPage.clickOnFormHeader();
     }
 
     @Test
     public void test2() {
-        this.app.driver.get(baseUrl);
+        TinkoffVacanciesPage.open();
 
-        this.app.driver.findElement(By.name("name")).click();
-        this.app.driver.findElement(By.name("name")).clear();
-        this.app.driver.findElement(By.name("name")).sendKeys("1");
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickName();
+        TinkoffVacanciesPage.clearName();
+        TinkoffVacanciesPage.setName("1");
+        TinkoffVacanciesPage.clickOnFormHeader();
         assertEquals(
                 "Допустимо использовать только буквы русского алфавита и дефис",
-                this.app.driver.findElement(By.xpath("//div[@data-qa-file=\"CareerForm\"]//div[contains(@class, \"ui-suggest\")][.//span[text()=\"Фамилия и имя\"]]/following-sibling::div[contains(@class,\"error-message\")]")).getText());
+                TinkoffVacanciesPage.getInvalidNameErrorMessageText());
 
-        this.app.driver.findElement(By.name("birthday")).click();
-        this.app.driver.findElement(By.name("birthday")).clear();
-        this.app.driver.findElement(By.name("birthday")).sendKeys("1");
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickBirthday();
+        TinkoffVacanciesPage.clearBirthday();
+        TinkoffVacanciesPage.setBirthday("1");
+        TinkoffVacanciesPage.clickOnFormHeader();
         assertEquals(
                 "Поле заполнено некорректно",
-                this.app.driver.findElement(By.xpath("//div[@data-qa-file=\"CareerForm\"]//div[contains(@class, \"ui-inputdate\")][.//span[text()=\"Дата рождения\"]]/following-sibling::div[contains(@class,\"error-message\")]")).getText());
+                TinkoffVacanciesPage.getInvalidBirthdayErrorMessageText());
 
-        this.app.driver.findElement(By.name("city")).click();
-        this.app.driver.findElement(By.name("city")).clear();
-        this.app.driver.findElement(By.name("city")).sendKeys("1");
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickCity();
+        TinkoffVacanciesPage.clearCity();
+        TinkoffVacanciesPage.setCity("1");
+        TinkoffVacanciesPage.clickOnFormHeader();
 
-        this.app.driver.findElement(By.name("email")).click();
-        this.app.driver.findElement(By.name("email")).clear();
-        this.app.driver.findElement(By.name("email")).sendKeys("1");
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickEmail();
+        TinkoffVacanciesPage.clearEmail();
+        TinkoffVacanciesPage.setEmail("1");
+        TinkoffVacanciesPage.clickOnFormHeader();
         assertEquals(
                 "Введите корректный адрес эл. почты",
-                this.app.driver.findElement(By.xpath("//div[@data-qa-file=\"CareerForm\"]//div[contains(@class, \"ui-input\")][.//span[text()=\"Электронная почта\"]]/following-sibling::div[contains(@class,\"error-message\")]")).getText());
+                TinkoffVacanciesPage.getInvalidEmailErrorMessageText());
 
-        this.app.driver.findElement(By.name("phone")).click();
-        this.app.driver.findElement(By.name("phone")).clear();
-        this.app.driver.findElement(By.name("phone")).sendKeys("+7(1");
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickPhone();
+        TinkoffVacanciesPage.clearPhone();
+        TinkoffVacanciesPage.setPhone("+7(1");
+        TinkoffVacanciesPage.clickOnFormHeader();
         assertEquals(
                 "Номер телефона должен состоять из 10 цифр, начиная с кода оператора",
-                this.app.driver.findElement(By.xpath("//div[@data-qa-file=\"CareerForm\"]//div[contains(@class, \"ui-input\")][.//span[text()=\"Мобильный телефон\"]]/following-sibling::div[contains(@class,\"error-message\")]")).getText());
+                TinkoffVacanciesPage.getInvalidPhoneErrorMessageText());
 
-        this.app.driver.findElement(By.name("socialLink0")).click();
-        this.app.driver.findElement(By.name("socialLink0")).clear();
-        this.app.driver.findElement(By.name("socialLink0")).sendKeys("1");
-        this.clickOnFormHeader();
+        TinkoffVacanciesPage.clickSocialLink();
+        TinkoffVacanciesPage.clearSocialLink();
+        TinkoffVacanciesPage.setSocialLink("1");
+        TinkoffVacanciesPage.clickOnFormHeader();
     }
 
     @Test
@@ -211,10 +208,6 @@ public class TestRunner extends BaseRunner {
     @After
     public void tearDown() {
         this.app.driver.quit();
-    }
-
-    private void clickOnFormHeader() {
-        this.app.driver.findElement(By.xpath("//div[text()=\"Заполните анкету\"]")).click();
     }
 
     private String getNthTabAndSwitchTo(int nth) {
