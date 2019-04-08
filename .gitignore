@@ -6,6 +6,7 @@ out/
 *.class
 *.iml
 tmp
+target
 
 # Database
 DatabaseParameters.java
